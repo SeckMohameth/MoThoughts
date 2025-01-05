@@ -37,8 +37,11 @@ struct NoteEditView: View {
             HStack {
                 Button(action: addBulletPoint) {
                     Image(systemName: "list.bullet")
-                        .foregroundStyle(.secondary)
+                        .resizable()
+                        .frame(width: 24, height: 24)
+                        .foregroundStyle(.blue)
                 }
+             
                 Spacer()
             }
             .padding()
@@ -47,7 +50,7 @@ struct NoteEditView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") {
+                Button("Save") {
                     saveNote()
                 }
                 .disabled(title.isEmpty)
@@ -59,6 +62,7 @@ struct NoteEditView: View {
     private func addBulletPoint() {
         content.append("\n• ")
     }
+  
     
     private func saveNote() {
         if let existingNote = note {
@@ -76,3 +80,6 @@ struct NoteEditView: View {
 }
 
 // End of file. No additional code.
+#Preview {
+    NoteEditView(note: Note(title: "Mo", content: "Testing"))
+}

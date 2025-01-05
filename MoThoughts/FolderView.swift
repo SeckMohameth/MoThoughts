@@ -8,6 +8,9 @@ struct FolderView: View {
     @State private var showingNewFolder = false
     @State private var newFolderName = ""
     
+    @State private var searchText: String = ""
+    @State private var filteredFolders: [Folder] = []
+    
     // MARK: - Body
     var body: some View {
         ScrollView {
@@ -15,7 +18,7 @@ struct FolderView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 16) {
-                ForEach(folders) { folder in
+                ForEach(searchText.isEmpty ? folders : filteredFolders) { folder in
                     NavigationLink(destination: FolderDetailView(folder: folder)) {
                         VStack {
                             Image(systemName: "folder.fill")
@@ -33,7 +36,17 @@ struct FolderView: View {
             }
             .padding()
         }
-        .navigationTitle("Folders")
+        .searchable(text: $searchText, prompt: "Search folders...")
+        .onChange(of: searchText) { _, newValue in
+            if !newValue.isEmpty {
+                filteredFolders = folders.filter { folder in
+                    folder.name.localizedCaseInsensitiveContains(newValue)
+                }
+            } else {
+                filteredFolders = folders
+            }
+        }
+        .navigationTitle("Folders ")
         .toolbar {
             Button(action: { showingNewFolder = true }) {
                 Image(systemName: "plus")
@@ -70,7 +83,11 @@ struct FolderView: View {
 
 // MARK: - FolderDetailView
 struct FolderDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     let folder: Folder
+    @State private var showingRenameDialog = false
+    @State private var newFolderName = ""
     
     var body: some View {
         List(folder.notes ?? []) { note in
@@ -84,8 +101,49 @@ struct FolderDetailView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .swipeActions(edge: .trailing) {
+                Button(role: .destructive) {
+                    if let notes = folder.notes,
+                       let index = notes.firstIndex(where: { $0.id == note.id }) {
+                        note.folder = nil
+                    }
+                } label: {
+                    Label("Remove", systemImage: "folder.badge.minus")
+                }
+            }
         }
         .navigationTitle(folder.name)
+        .toolbar {
+            Menu {
+                Button {
+                    newFolderName = folder.name
+                    showingRenameDialog = true
+                } label: {
+                    Label("Rename Folder", systemImage: "pencil")
+                }
+                
+                Button(role: .destructive) {
+                    modelContext.delete(folder)
+                    dismiss()
+                } label: {
+                    Label("Delete Folder", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+        }
+        .alert("Rename Folder", isPresented: $showingRenameDialog) {
+            TextField("Folder Name", text: $newFolderName)
+            Button("Cancel", role: .cancel) { }
+            Button("Rename") {
+                folder.name = newFolderName
+            }
+        } message: {
+            Text("Enter a new name for this folder")
+        }
     }
 }
 
+#Preview {
+    FolderView()
+}
